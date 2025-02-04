@@ -68,18 +68,49 @@ func addTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tasks[task.ID] = task
-	w.Header().Set("Content-Type", "j")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+}
+
+func getById(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	task, ok := tasks[id]
+	if !ok {
+		http.Error(w, "Задача c id "+id+" не найдена", http.StatusNotFound)
+		return
+	}
+
+	resp, err := json.Marshal(task)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(resp)
+}
+
+func deleteById(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	_, ok := tasks[id]
+	if !ok {
+		http.Error(w, "Задача c id "+id+" не найдена", http.StatusBadRequest)
+		return
+	}
+
+	delete(tasks, id)
+	w.WriteHeader(http.StatusOK)
 }
 
 func main() {
 	r := chi.NewRouter()
 
-	// здесь регистрируйте ваши обработчики
-	// ...
-
 	r.Get("/tasks", getTasks)
+	r.Post("/tasks", addTask)
+	r.Get("/tasks/{id}", getById)
+	r.Delete("/tasks/{id}", deleteById)
 
-	fmt.Printf("Сервер запущен")
+	fmt.Println("Сервер запущен")
 	if err := http.ListenAndServe(":8080", r); err != nil {
 		fmt.Printf("Ошибка при запуске сервера: %s", err.Error())
 		return
